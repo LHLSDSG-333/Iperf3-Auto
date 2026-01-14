@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPerf3 网络性能测试</title>
+    <style>
+        /* 基础样式重置 - 工业风格 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', 'Arial', sans-serif;
+            font-size: 14px;
+        }
+        
+        body {
+            background-color: #2b2b2b;
+            color: #d4d4d4;
+            line-height: 1.4;
+            padding: 8px;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: calc(100vh - 16px);
+            gap: 8px;
+        }
+        
+        /* 左侧配置区域 - 紧凑工业风格 */
+        .config-panel {
+            flex: 0 0 350px;
+            background-color: #1e1e1e;
+            border-radius: 4px;
+            padding: 12px;
+            border: 1px solid #3c3c3c;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        /* 右侧结果区域 */
+        .results-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        /* 主测试和断点测试结果区域 */
+        .test-results {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            min-height: 0;
+        }
+        
+        .main-test-results,
+        .breakpoint-test-results {
+            flex: 1;
+            background-color: #1e1e1e;
+            border-radius: 4px;
+            padding: 12px;
+            border: 1px solid #3c3c3c;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        /* 标题样式 - 紧凑 */
+        .panel-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #569cd6;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #3c3c3c;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .panel-subtitle {
+            font-size: 14px;
+            font-weight: 500;
+            color: #9cdcfe;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #2d2d2d;
+        }
+        
+        /* 表单组样式 - 紧凑 */
+        .form-section {
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2d2d2d;
+        }
+        
+        .form-section:last-child {
+            border-bottom: none;
+        }
+        
+        .form-group {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .form-group label {
+            display: block;
+            min-width: 100px;
+            font-weight: 500;
+            color: #cccccc;
+            margin-right: 8px;
+        }
+        
+        .form-control {
+            flex: 1;
+            padding: 4px 6px;
+            background-color: #252526;
+            border: 1px solid #3c3c3c;
+            border-radius: 2px;
+            color: #cccccc;
+            font-size: 13px;
+            height: 24px;
+        }
+        
+        .form-control:focus {
+            border-color: #007acc;
+            outline: none;
+        }
+        
+        /* 切换按钮组 - 紧凑 */
+        .toggle-group {
+            flex: 1;
+            display: flex;
+            border: 1px solid #3c3c3c;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .toggle-btn {
+            flex: 1;
+            padding: 4px 6px;
+            background-color: #2d2d2d;
+            border: none;
+            border-right: 1px solid #3c3c3c;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 500;
+            color: #cccccc;
+            font-size: 13px;
+            height: 24px;
+        }
+        
+        .toggle-btn:last-child {
+            border-right: none;
+        }
+        
+        .toggle-btn.active {
+            background-color: #007acc;
+            color: white;
+        }
+        
+        .toggle-btn:not(.active):hover {
+            background-color: #3c3c3c;
+        }
+        
+        /* 按钮样式 - 紧凑工业风格 */
+        .btn {
+            padding: 4px 8px;
+            border: 1px solid #3c3c3c;
+            border-radius: 2px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        
+        .btn i {
+            font-size: 10px;
+        }
+        
+        .btn-primary {
+            background-color: #007acc;
+            color: white;
+            border-color: #007acc;
+        }
+        
+        .btn-primary:hover {
+            background-color: #106ebe;
+        }
+        
+        .btn-secondary {
+            background-color: #4d4d4d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a5a5a;
+        }
+        
+        .btn-success {
+            background-color: #387b3c;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #2d6330;
+        }
+        
+        .btn-warning {
+            background-color: #d67e00;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background-color: #b36b00;
+        }
+        
+        .btn-danger {
+            background-color: #a1260d;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #8a1f0b;
+        }
+        
+        .btn:disabled {
+            background-color: #3c3c3c;
+            color: #666666;
+            cursor: not-allowed;
+            border-color: #3c3c3c;
+        }
+        
+        /* 按钮组 - 紧凑排列 */
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        
+        /* 测试数据显示区域 - 紧凑 */
+        .test-data-container {
+            background-color: #252526;
+            border-radius: 2px;
+            padding: 8px;
+            margin-top: 6px;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.3;
+            border: 1px solid #3c3c3c;
+        }
+        
+        .test-data-container.empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666666;
+            font-style: italic;
+        }
+        
+        /* 状态指示器 - 紧凑 */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 2px;
+            font-size: 11px;
+            font-weight: 500;
+            background-color: #252526;
+            border: 1px solid #3c3c3c;
+        }
+        
+        .status-idle {
+            color: #808080;
+        }
+        
+        .status-running {
+            color: #6a9955;
+        }
+        
+        .status-paused {
+            color: #d67e00;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-idle .status-dot {
+            background-color: #808080;
+        }
+        
+        .status-running .status-dot {
+            background-color: #6a9955;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .status-paused .status-dot {
+            background-color: #d67e00;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* 进度条 - 紧凑 */
+        .progress-container {
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background-color: #252526;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 4px;
+            border: 1px solid #3c3c3c;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #007acc;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            font-size: 10px;
+            color: #808080;
+            text-align: right;
+        }
+        
+        /* 统计信息 - 紧凑 */
+        .stats-container {
+            background-color: #252526;
+            border-radius: 2px;
+            padding: 8px;
+            margin-top: 6px;
+            border: 1px solid #3c3c3c;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        
+        .stat-item {
+            background-color: #1e1e1e;
+            padding: 6px;
+            border-radius: 2px;
+            border-left: 2px solid #007acc;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #808080;
+            margin-bottom: 2px;
+        }
+        
+        .stat-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #cccccc;
+        }
+        
+        /* 配置摘要 */
+        .config-summary {
+            background-color: #252526;
+            border-radius: 2px;
+            padding: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #3c3c3c;
+        }
+        
+        .summary-item {
+            margin-bottom: 4px;
+            font-size: 11px;
+        }
+        
+        .summary-label {
+            color: #808080;
+            display: inline-block;
+            width: 80px;
+        }
+        
+        .summary-value {
+            color: #cccccc;
+            font-weight: 500;
+        }
+        
+        /* 分隔线 */
+        .divider {
+            height: 1px;
+            background-color: #3c3c3c;
+            margin: 8px 0;
+        }
+        
+        /* 隐藏/显示相关元素的工具类 */
+        .hidden {
+            display: none !important;
+        }
+        
+        /* 数据行样式 */
+        .data-row {
+            padding: 2px 0;
+            border-bottom: 1px solid #2d2d2d;
+        }
+        
+        .data-row.main-test {
+            color: #4ec9b0;
+        }
+        
+        .data-row.breakpoint-test {
+            color: #d7ba7d;
+        }
+        
+        .data-row.info {
+            color: #808080;
+            font-style: italic;
+        }
+        
+        /* 时间戳 */
+        .timestamp {
+            color: #808080;
+            font-size: 10px;
+        }
+        
+        /* 滚动条样式 */
+        .test-data-container::-webkit-scrollbar,
+        .config-panel::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .test-data-container::-webkit-scrollbar-track,
+        .config-panel::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        
+        .test-data-container::-webkit-scrollbar-thumb,
+        .config-panel::-webkit-scrollbar-thumb {
+            background: #3c3c3c;
+            border-radius: 4px;
+        }
+        
+        .test-data-container::-webkit-scrollbar-thumb:hover,
+        .config-panel::-webkit-scrollbar-thumb:hover {
+            background: #505050;
+        }
+    </style>
+    <!-- 引入Font Awesome图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧配置面板 -->
+        <div class="config-panel">
+            <!-- 状态指示器 -->
+            <div class="form-section">
+                <div class="status-indicator status-idle" id="mainStatusIndicator">
+                    <span class="status-dot"></span>
+                    <span id="mainStatusText">主测试: 就绪</span>
+                </div>
+                <div class="status-indicator status-idle" id="breakpointStatusIndicator">
+                    <span class="status-dot"></span>
+                    <span id="breakpointStatusText">断点测试: 就绪</span>
+                </div>
+            </div>
+            
+            <!-- 服务器配置 -->
+            <div class="form-section">
+                <h3 class="panel-subtitle">服务器配置</h3>
+                <div class="form-group">
+                    <label for="serverIp">服务器IP</label>
+                    <input type="text" id="serverIp" class="form-control" placeholder="192.168.1.100" value="127.0.0.1">
+                </div>
+                <div class="form-group">
+                    <label for="serverPort">端口</label>
+                    <input type="number" id="serverPort" class="form-control" min="1" max="65535" value="5201">
+                </div>
+            </div>
+            
+            <!-- 测试参数 -->
+            <div class="form-section">
+                <h3 class="panel-subtitle">测试参数</h3>
+                <div class="form-group">
+                    <label>方向</label>
+                    <div class="toggle-group">
+                        <button type="button" class="toggle-btn active" data-direction="upload">上行</button>
+                        <button type="button" class="toggle-btn" data-direction="download">下行</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>协议</label>
+                    <div class="toggle-group">
+                        <button type="button" class="toggle-btn active" data-protocol="tcp">TCP</button>
+                        <button type="button" class="toggle-btn" data-protocol="udp">UDP</button>
+                    </div>
+                </div>
+                <div class="form-group hidden" id="udpBandwidthGroup">
+                    <label for="udpBandwidth">UDP带宽</label>
+                    <input type="number" id="udpBandwidth" class="form-control" min="1" max="10000" value="1000">
+                </div>
+            </div>
+            
+            <!-- 时间设置 -->
+            <div class="form-section">
+                <h3 class="panel-subtitle">时间设置</h3>
+                <div class="form-group">
+                    <label for="testDuration">主测试时长(s)</label>
+                    <input type="number" id="testDuration" class="form-control" min="5" max="600" value="30">
+                </div>
+                <div class="form-group">
+                    <label for="mainTestInterval">主测试间隔(s)</label>
+                    <input type="number" id="mainTestInterval" class="form-control" min="1" max="10" value="1" step="0.1">
+                    <small style="color:#808080; margin-left:4px;">数据报告间隔</small>
+                </div>
+                <div class="form-group">
+                    <label for="breakpointInterval">断点间隔(s)</label>
+                    <input type="number" id="breakpointInterval" class="form-control" min="1" max="60" value="5">
+                </div>
+            </div>
+            
+            <!-- 配置摘要 -->
+            <div class="config-summary">
+                <div class="summary-item">
+                    <span class="summary-label">当前配置:</span>
+                    <span class="summary-value" id="configSummary">TCP上行30s</span>
+                </div>
+            </div>
+            
+            <!-- 主测试进度条 -->
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="mainProgressFill"></div>
+                </div>
+                <div class="progress-text">
+                    进度: <span id="mainProgressText">0%</span>
+                </div>
+            </div>
+            
+            <!-- 主测试控制按钮 -->
+            <div class="form-section">
+                <h3 class="panel-subtitle">主测试控制</h3>
+                <div class="button-group">
+                    <button class="btn btn-primary" id="startMainTestBtn">
+                        <i class="fas fa-play"></i> 开始
+                    </button>
+                    <button class="btn btn-warning" id="pauseMainTestBtn" disabled>
+                        <i class="fas fa-pause"></i> 暂停
+                    </button>
+                    <!-- <button class="btn btn-secondary" id="restartMainTestBtn" disabled>
+                        <i class="fas fa-redo"></i> 重开
+                    </button> -->
+                    <button class="btn btn-success" id="saveMainDataBtn" disabled>
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                    <button class="btn btn-secondary" id="clearMainDataBtn">
+                        <i class="fas fa-trash"></i> 清除
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 断点测试控制按钮 -->
+            <div class="form-section">
+                <h3 class="panel-subtitle">断点测试控制</h3>
+                <div class="button-group">
+                    <button class="btn btn-danger" id="startBreakpointTestBtn">
+                        <i class="fas fa-record-vinyl"></i> 启动
+                    </button>
+                    <button class="btn btn-secondary" id="stopBreakpointTestBtn" disabled>
+                        <i class="fas fa-stop"></i> 停止
+                    </button>
+                    <button class="btn btn-success" id="saveBreakpointDataBtn" disabled>
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                    <button class="btn btn-secondary" id="clearBreakpointDataBtn">
+                        <i class="fas fa-trash"></i> 清除
+                    </button>
+                </div>
+                <div class="button-row">
+                    <button class="btn btn-secondary" id="manualBreakpointBtn" disabled>
+                        <i class="fas fa-map-marker-alt"></i> 手动断点
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 主测试统计数据 -->
+            <div class="stats-container">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">平均带宽</div>
+                        <div class="stat-value" id="mainAvgBandwidth">-- Mbps</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">最大带宽</div>
+                        <div class="stat-value" id="mainMaxBandwidth">-- Mbps</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">丢包率</div>
+                        <div class="stat-value" id="mainPacketLoss">-- %</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">测试时长</div>
+                        <div class="stat-value" id="mainDuration">0s</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 断点测试统计数据 -->
+            <div class="stats-container">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">断点数量</div>
+                        <div class="stat-value" id="breakpointCount">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">平均带宽</div>
+                        <div class="stat-value" id="breakpointAvgBandwidth">-- Mbps</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">最后断点</div>
+                        <div class="stat-value" id="lastBreakpointTime">--</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">断点时长</div>
+                        <div class="stat-value" id="breakpointDuration">0s</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧结果面板 -->
+        <div class="results-panel">
+            <!-- 主测试结果区域 -->
+            <div class="main-test-results">
+                <h2 class="panel-title">
+                    <span><i class="fas fa-chart-line"></i> 主测试数据流</span>
+                    <span class="timestamp" id="mainTestTimer">00:00</span>
+                </h2>
+                
+                <!-- 主测试数据显示区域 -->
+                <div class="test-data-container empty" id="mainTestDataDisplay">
+                    主测试数据将在这里显示...
+                </div>
+            </div>
+            
+            <!-- 断点测试结果区域 -->
+            <div class="breakpoint-test-results">
+                <h2 class="panel-title">
+                    <span><i class="fas fa-map-marker-alt"></i> 断点测试数据</span>
+                    <span class="timestamp" id="breakpointTestTimer">00:00</span>
+                </h2>
+                
+                <!-- 断点测试数据显示区域 -->
+                <div class="test-data-container empty" id="breakpointTestDataDisplay">
+                    断点测试数据将在这里显示...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 前端应用状态
+        const AppState = {
+            mainTest: {
+                status: 'idle',
+                startTime: null,
+                elapsedTime: 0,
+                timerInterval: null,
+                data: '',
+                progress: 0,
+                dataPoints: [],
+                stats: {
+                    avgBandwidth: 0,
+                    maxBandwidth: 0,
+                    packetLoss: 0,
+                    dataPointCount: 0
+                }
+            },
+            breakpointTest: {
+                status: 'idle',
+                startTime: null,
+                elapsedTime: 0,
+                timerInterval: null,
+                breakpoints: [],
+                nextBreakpointTime: 0,
+                interval: 5
+            },
+            currentProtocol: 'tcp',
+            currentDirection: 'upload'
+        };
+        
+        const elements = {
+            mainStatusIndicator: document.getElementById('mainStatusIndicator'),
+            mainStatusText: document.getElementById('mainStatusText'),
+            breakpointStatusIndicator: document.getElementById('breakpointStatusIndicator'),
+            breakpointStatusText: document.getElementById('breakpointStatusText'),
+            
+            serverIp: document.getElementById('serverIp'),
+            serverPort: document.getElementById('serverPort'),
+            udpBandwidthGroup: document.getElementById('udpBandwidthGroup'),
+            udpBandwidth: document.getElementById('udpBandwidth'),
+            testDuration: document.getElementById('testDuration'),
+            mainTestInterval: document.getElementById('mainTestInterval'),
+            breakpointInterval: document.getElementById('breakpointInterval'),
+            
+            mainProgressFill: document.getElementById('mainProgressFill'),
+            mainProgressText: document.getElementById('mainProgressText'),
+            
+            mainTestDataDisplay: document.getElementById('mainTestDataDisplay'),
+            breakpointTestDataDisplay: document.getElementById('breakpointTestDataDisplay'),
+            
+            mainTestTimer: document.getElementById('mainTestTimer'),
+            breakpointTestTimer: document.getElementById('breakpointTestTimer'),
+            
+            mainAvgBandwidth: document.getElementById('mainAvgBandwidth'),
+            mainMaxBandwidth: document.getElementById('mainMaxBandwidth'),
+            mainPacketLoss: document.getElementById('mainPacketLoss'),
+            mainDuration: document.getElementById('mainDuration'),
+            breakpointCount: document.getElementById('breakpointCount'),
+            breakpointAvgBandwidth: document.getElementById('breakpointAvgBandwidth'),
+            lastBreakpointTime: document.getElementById('lastBreakpointTime'),
+            breakpointDuration: document.getElementById('breakpointDuration'),
+            
+            configSummary: document.getElementById('configSummary'),
+            
+            startMainTestBtn: document.getElementById('startMainTestBtn'),
+            pauseMainTestBtn: document.getElementById('pauseMainTestBtn'),
+            // restartMainTestBtn: document.getElementById('restartMainTestBtn'),
+            saveMainDataBtn: document.getElementById('saveMainDataBtn'),
+            clearMainDataBtn: document.getElementById('clearMainDataBtn'),
+            
+            startBreakpointTestBtn: document.getElementById('startBreakpointTestBtn'),
+            stopBreakpointTestBtn: document.getElementById('stopBreakpointTestBtn'),
+            saveBreakpointDataBtn: document.getElementById('saveBreakpointDataBtn'),
+            clearBreakpointDataBtn: document.getElementById('clearBreakpointDataBtn'),
+            manualBreakpointBtn: document.getElementById('manualBreakpointBtn'),
+            
+            directionBtns: document.querySelectorAll('[data-direction]'),
+            protocolBtns: document.querySelectorAll('[data-protocol]')
+        };
+        
+        // SSE Connection
+        let evtSource = null;
+
+        function initEventStream() {
+            if (evtSource) return;
+            evtSource = new EventSource('/stream');
+            evtSource.onmessage = function(e) {
+                // Keep-alive or data
+                if (e.data.trim()) {
+                    if (e.data.includes("Process finished.")) {
+                        if (AppState.mainTest.status === 'running') {
+                             stopMainTest(false);
+                        }
+                    }
+                    appendMainTestData(e.data);
+                }
+            };
+            evtSource.onerror = function(e) {
+                console.log("EventSource failed, retrying in 2s...");
+                // Browser auto reconnects usually, but we can explicit close and retry if needed
+            };
+        }
+
+        function initializeApp() {
+            console.log('App Initializing...');
+            setupEventListeners();
+            updateMainStatus('idle', 'Main Test: Ready');
+            updateBreakpointStatus('idle', 'Breakpoint Test: Ready');
+            updateConfigSummary();
+            initEventStream();
+            
+            // Auto shutdown on close
+            window.addEventListener('beforeunload', function() {
+                // User asked for "auto clear all content after closing test window".
+                // Killing the process clears Python memory (Backend).
+                // Browser cache/LocalStorage is not used for data persistence, 
+                // so simply refreshing or reopening the page clears Frontend.
+                // So shutdown is sufficient.
+                const data = JSON.stringify({});
+                navigator.sendBeacon('/api/shutdown', data);
+            });
+        }
+        
+        function setupEventListeners() {
+            elements.directionBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    elements.directionBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    AppState.currentDirection = this.dataset.direction;
+                    updateConfigSummary();
+                });
+            });
+            
+            elements.protocolBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    elements.protocolBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    AppState.currentProtocol = this.dataset.protocol;
+                    
+                    if (AppState.currentProtocol === 'udp') {
+                        elements.udpBandwidthGroup.classList.remove('hidden');
+                    } else {
+                        elements.udpBandwidthGroup.classList.add('hidden');
+                    }
+                    updateConfigSummary();
+                });
+            });
+            
+            elements.testDuration.addEventListener('input', updateConfigSummary);
+            elements.breakpointInterval.addEventListener('input', updateConfigSummary);
+            
+            elements.startMainTestBtn.addEventListener('click', startMainTest);
+            elements.pauseMainTestBtn.addEventListener('click', stopMainTest); // Pause actually stops in this version
+            // elements.restartMainTestBtn.addEventListener('click', startMainTest);
+            elements.saveMainDataBtn.addEventListener('click', saveMainTestData);
+            elements.clearMainDataBtn.addEventListener('click', clearMainTestData);
+            
+            elements.startBreakpointTestBtn.addEventListener('click', startBreakpointTest);
+            elements.stopBreakpointTestBtn.addEventListener('click', stopBreakpointTest);
+            elements.saveBreakpointDataBtn.addEventListener('click', saveBreakpointTestData);
+            elements.clearBreakpointDataBtn.addEventListener('click', clearBreakpointTestData);
+            elements.manualBreakpointBtn.addEventListener('click', manualBreakpoint);
+        }
+        
+        function updateConfigSummary() {
+            const duration = elements.testDuration.value;
+            const protocol = AppState.currentProtocol.toUpperCase();
+            const direction = AppState.currentDirection === 'upload' ? 'Upload' : 'Download';
+            const breakpointInterval = elements.breakpointInterval.value;
+            elements.configSummary.textContent = `${protocol} ${direction} ${duration}s (BP:${breakpointInterval}s)`;
+        }
+        
+        function updateMainStatus(status, message) {
+            AppState.mainTest.status = status;
+            elements.mainStatusIndicator.className = `status-indicator status-${status}`;
+            elements.mainStatusText.textContent = message;
+            
+            const isRunning = status === 'running';
+
+            elements.startMainTestBtn.disabled = isRunning;
+            elements.pauseMainTestBtn.disabled = !isRunning;
+            // elements.restartMainTestBtn.disabled = true; // Simplified
+            
+            if (isRunning) {
+                elements.saveMainDataBtn.disabled = true;
+                elements.clearMainDataBtn.disabled = true;
+                
+                // Also disable server configs
+                elements.serverIp.disabled = true;
+                elements.serverPort.disabled = true;
+                elements.testDuration.disabled = true;
+            } else {
+                elements.saveMainDataBtn.disabled = AppState.mainTest.dataPoints.length === 0;
+                elements.clearMainDataBtn.disabled = AppState.mainTest.dataPoints.length === 0;
+
+                // Enable start if ip entered
+                elements.startMainTestBtn.disabled = !elements.serverIp.value; 
+                
+                elements.serverIp.disabled = false;
+                elements.serverPort.disabled = false;
+                elements.testDuration.disabled = false;
+            }
+        }
+
+        function updateBreakpointStatus(status, message) {
+            AppState.breakpointTest.status = status;
+            elements.breakpointStatusIndicator.className = `status-indicator status-${status}`;
+            elements.breakpointStatusText.textContent = message;
+            
+            const isIdle = status === 'idle' || status === 'completed';
+            const isRunning = status === 'running';
+            
+            elements.startBreakpointTestBtn.disabled = isRunning;
+            elements.stopBreakpointTestBtn.disabled = !isRunning;
+            elements.saveBreakpointDataBtn.disabled = isRunning;
+        }
+
+        async function startMainTest() {
+             const ip = elements.serverIp.value.trim();
+             const port = elements.serverPort.value;
+             const duration = elements.testDuration.value;
+             const interval = elements.mainTestInterval.value;
+             const isUdp = AppState.currentProtocol === 'udp';
+             const isReverse = AppState.currentDirection === 'download';
+             
+             // Construct command
+             // iperf3 -c <ip> -p <port> -t <dur> -i <intv>
+             let cmd = `iperf3 -c ${ip} -p ${port} -t ${duration} -i ${interval} --forceflush`;
+             if (isUdp) {
+                 cmd += ` -u -b ${elements.udpBandwidth.value}M`;
+             }
+             if (isReverse) {
+                 cmd += ` -R`;
+             }
+
+             clearMainTestData();
+             updateMainStatus('running', 'Running...');
+             startMainTimer();
+
+             try {
+                const res = await fetch('/api/start', {
+                    method: 'POST',
+                    body: JSON.stringify({ command: cmd })
+                });
+                const j = await res.json();
+                if (j.status !== 'ok') {
+                     updateMainStatus('idle', 'Error: ' + j.msg);
+                }
+             } catch(e) {
+                 updateMainStatus('idle', 'Network Error');
+             }
+        }
+
+        async function stopMainTest() {
+             await fetch('/api/stop', { method: 'POST', body: JSON.stringify({}) });
+             clearInterval(AppState.mainTest.timerInterval);
+             updateMainStatus('idle', 'Stopped');
+             
+             // Manually generate and display summary if stopped by user
+             if (AppState.mainTest.dataPoints.length > 0) {
+                 generateAndShowMainSummary();
+             }
+        }
+
+        function generateAndShowMainSummary() {
+            const stats = AppState.mainTest.stats;
+            const duration = AppState.mainTest.elapsedTime;
+            const summary = `
+-----------------------------------------------------------
+Test Finished (or Paused) - Summary
+-----------------------------------------------------------
+Total Duration : ${duration.toFixed(1)} sec
+Avg Bandwidth  : ${stats.avgBandwidth.toFixed(2)} Mbps
+Max Bandwidth  : ${stats.maxBandwidth.toFixed(2)} Mbps
+Data Points    : ${AppState.mainTest.dataPoints.length}
+-----------------------------------------------------------
+`;
+            elements.mainTestDataDisplay.textContent += summary;
+            elements.mainTestDataDisplay.scrollTop = elements.mainTestDataDisplay.scrollHeight;
+            AppState.mainTest.data += summary;
+        }
+
+        function appendMainTestData(data) {
+             const elapsed = AppState.mainTest.elapsedTime;
+             const timestamp = new Date().toLocaleTimeString();
+             // Simple clean up
+             data = data.replace(/^\[.*?\]\s*/, ''); 
+             
+             // Only log significant lines
+             AppState.mainTest.data += `[${timestamp}] ${data}\n`;
+             elements.mainTestDataDisplay.textContent = AppState.mainTest.data;
+             elements.mainTestDataDisplay.classList.remove('empty');
+             elements.mainTestDataDisplay.scrollTop = elements.mainTestDataDisplay.scrollHeight;
+
+             // Parse stats
+             recordMainDataPoint(data, elapsed);
+             // Also check for end of test signal if iperf prints it
+        }
+
+        function recordMainDataPoint(data, elapsed) {
+            // Regex to match typical iperf3 bandwidth line
+            // [  5]   0.00-1.00   sec  38.6 Gbits/sec
+            const bandwidthRegex = /\s+(\d+(?:\.\d+)?)\s+([KMGT]?bits\/sec)/;
+            const bandwidthMatch = data.match(bandwidthRegex);
+            
+            if (bandwidthMatch) {
+                const val = parseFloat(bandwidthMatch[1]);
+                const unit = bandwidthMatch[2];
+                let bandwidth = val;
+                
+                if (unit.startsWith('K')) bandwidth = val / 1000;
+                else if (unit.startsWith('M')) bandwidth = val;
+                else if (unit.startsWith('G')) bandwidth = val * 1000;
+
+                const dataPoint = {
+                    timestamp: new Date().toISOString(),
+                    elapsed: elapsed,
+                    bandwidth: bandwidth,
+                    packetLoss: 0, // Simplified parsing for now
+                    rawLine: data
+                };
+                
+                AppState.mainTest.dataPoints.push(dataPoint);
+                checkBreakpointRecording(dataPoint);
+                
+                // Update stats
+                 if (bandwidth > AppState.mainTest.stats.maxBandwidth) {
+                    AppState.mainTest.stats.maxBandwidth = bandwidth;
+                }
+                
+                // Update Avg
+                let sum = 0;
+                AppState.mainTest.dataPoints.forEach(p => sum += p.bandwidth);
+                AppState.mainTest.stats.avgBandwidth = sum / AppState.mainTest.dataPoints.length;
+                
+                updateMainStats();
+            }
+        }
+        
+        function updateMainStats() {
+            elements.mainAvgBandwidth.textContent = AppState.mainTest.stats.avgBandwidth.toFixed(1) + ' Mbps';
+            elements.mainMaxBandwidth.textContent = AppState.mainTest.stats.maxBandwidth.toFixed(1) + ' Mbps';
+        }
+
+        function checkBreakpointRecording(dataPoint) {
+            if (AppState.breakpointTest.status !== 'running') return;
+            
+            const nextTime = AppState.breakpointTest.nextBreakpointTime;
+            if (dataPoint.elapsed >= nextTime) {
+                const bpData = {
+                    ...dataPoint,
+                    breakpointTestElapsed: AppState.breakpointTest.elapsedTime
+                };
+                AppState.breakpointTest.breakpoints.push(bpData);
+                appendBreakpointTestData(bpData);
+                
+                // Schedule next
+                AppState.breakpointTest.nextBreakpointTime += parseFloat(AppState.breakpointTest.interval);
+                updateBreakpointStats();
+            }
+        }
+
+        function appendBreakpointTestData(bp) {
+             elements.breakpointTestDataDisplay.classList.remove('empty');
+             
+             // Directly capture the raw line from Main Test, but ensure formatting if rawLine not available
+             // (Older logic support)
+             let line = bp.rawLine;
+             if (!line) {
+                 const timestamp = new Date().toLocaleTimeString();
+                 const intervalStr = `${(bp.elapsed - 1).toFixed(2)}-${bp.elapsed.toFixed(2)}`.padStart(11);
+                 const bwStr = `${bp.bandwidth.toFixed(2)} Mbits/sec`.padStart(16);
+                 line = `[${timestamp}] [BP]  ${intervalStr}   sec  ${bwStr}`;
+             }
+             
+             // Log data storage
+             if (typeof AppState.breakpointTest.logData === 'undefined') {
+                 AppState.breakpointTest.logData = '';
+             }
+             
+             AppState.breakpointTest.logData += line.trim() + '\n';
+             elements.breakpointTestDataDisplay.textContent += line.trim() + "\n";
+             elements.breakpointTestDataDisplay.scrollTop = elements.breakpointTestDataDisplay.scrollHeight;
+        }
+        
+        function updateBreakpointStats() {
+             elements.breakpointCount.textContent = AppState.breakpointTest.breakpoints.length;
+             // Avg
+             let sum = 0;
+             AppState.breakpointTest.breakpoints.forEach(b => sum += b.bandwidth);
+             const avg = sum / (AppState.breakpointTest.breakpoints.length || 1);
+             elements.breakpointAvgBandwidth.textContent = avg.toFixed(1) + ' Mbps';
+        }
+
+        function clearMainTestData() {
+            AppState.mainTest.data = '';
+            AppState.mainTest.dataPoints = [];
+            AppState.mainTest.stats = {avgBandwidth:0, maxBandwidth:0, packetLoss:0, dataPointCount:0};
+            elements.mainTestDataDisplay.textContent = '';
+            elements.mainTestDataDisplay.classList.add('empty');
+            
+            // Clear stats display
+            elements.mainAvgBandwidth.textContent = '-';
+            elements.mainMaxBandwidth.textContent = '-';
+            elements.mainProgressFill.style.width = '0%';
+            elements.mainProgressText.textContent = '0%';
+            elements.mainTestTimer.textContent = '0:00';
+            
+            // Inform backend to clear logs
+            fetch('/api/clear', { method: 'POST', body: JSON.stringify({}) });
+        }
+
+        function startMainTimer() {
+            AppState.mainTest.startTime = Date.now();
+            clearInterval(AppState.mainTest.timerInterval);
+            AppState.mainTest.timerInterval = setInterval(() => {
+                const diff = (Date.now() - AppState.mainTest.startTime)/1000;
+                AppState.mainTest.elapsedTime = diff;
+                elements.mainDuration.textContent = diff.toFixed(0) + 's';
+                
+                const mins = Math.floor(diff/60);
+                const secs = Math.floor(diff%60);
+                elements.mainTestTimer.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+            }, 500);
+        }
+
+        function startBreakpointTest() {
+            if (AppState.mainTest.status !== 'running') {
+                alert("Please start Main Test first");
+                return;
+            }
+            AppState.breakpointTest.interval = parseFloat(elements.breakpointInterval.value);
+            AppState.breakpointTest.nextBreakpointTime = AppState.mainTest.elapsedTime + AppState.breakpointTest.interval;
+            
+            AppState.breakpointTest.startTime = Date.now();
+            updateBreakpointStatus('running', 'Recording...');
+            
+            
+             // Manually generate and display summary
+             if (AppState.breakpointTest.breakpoints.length > 0) {
+                 generateAndShowBreakpointSummary();
+             }
+        }
+        
+        function generateAndShowBreakpointSummary() {
+            const bps = AppState.breakpointTest.breakpoints;
+            let sum = 0;
+            let max = 0;
+            bps.forEach(b => {
+                sum += b.bandwidth;
+                if(b.bandwidth > max) max = b.bandwidth;
+            });
+            const avg = bps.length > 0 ? sum / bps.length : 0;
+            
+            const summary = `
+-----------------------------------------------------------
+Breakpoint Test Summary
+-----------------------------------------------------------
+Total Recorded : ${bps.length} points
+Avg Bandwidth  : ${avg.toFixed(2)} Mbps
+Max Bandwidth  : ${max.toFixed(2)} Mbps
+-----------------------------------------------------------
+`;
+             if (typeof AppState.breakpointTest.logData === 'undefined') {
+                 AppState.breakpointTest.logData = '';
+             }
+             AppState.breakpointTest.logData += summary;
+
+            elements.breakpointTestDataDisplay.textContent += summary;
+            elements.breakpointTestDataDisplay.scrollTop = elements.breakpointTestDataDisplay.scrollHeight;
+        }
+
+        function saveMainTestData() {
+            const defaultName = `iperf3_main_log_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.txt`;
+            let filename = prompt("请输入文件名 (可以直接回车使用默认名):", defaultName);
+            if (filename === null) return; // User cancelled
+            if (!filename.trim()) filename = defaultName;
+            if (!filename.endsWith('.txt')) filename += '.txt';
+
+            const blob = new Blob([AppState.mainTest.data], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+        }
+        
+        function saveBreakpointTestData() {
+            // Use logged string data including summary (matches Main Test behavior)
+            const dataToSave = AppState.breakpointTest.logData || "";
+            
+            const defaultName = `iperf3_breakpoint_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.txt`;
+            let filename = prompt("请输入文件名 (可以直接回车使用默认名):", defaultName);
+            if (filename === null) return; 
+            if (!filename.trim()) filename = defaultName;
+            if (!filename.endsWith('.txt')) filename += '.txt';
+
+            const blob = new Blob([dataToSave], {type: 'text/plain'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+        }
+
+        function stopBreakpointTest() {
+            updateBreakpointStatus('idle', 'Stopped');
+            clearInterval(AppState.breakpointTest.timerInterval);
+            
+             // Manually generate and display summary
+             if (AppState.breakpointTest.breakpoints.length > 0) {
+                 generateAndShowBreakpointSummary();
+             }
+        }
+
+        function clearBreakpointTestData() {
+            AppState.breakpointTest.data = '';
+            AppState.breakpointTest.breakpoints = [];
+            AppState.breakpointTest.logData = '';
+            elements.breakpointTestDataDisplay.textContent = '';
+            elements.breakpointTestDataDisplay.classList.add('empty');
+        }
+
+        function manualBreakpoint() {
+             if (AppState.mainTest.dataPoints.length > 0) {
+                 const last = AppState.mainTest.dataPoints[AppState.mainTest.dataPoints.length-1];
+                 const bp = {...last, manual: true};
+                 AppState.breakpointTest.breakpoints.push(bp);
+                 appendBreakpointTestData(bp);
+             }
+        }
+        
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
